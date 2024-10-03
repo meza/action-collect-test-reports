@@ -5,22 +5,19 @@ inputs:
   junit-report-path:
     description: "The path to the JUnit report"
     required: false
-    type: string
     default: "**/junit.xml"
   cobertura-report-path:
     description: "The path to the Cobertura report"
     required: false
-    type: string
     default: "**/cobertura-coverage.xml"
   cpdPath:
     description: "Where is your markdown cpd report generated to?"
     required: false
-    type: string
     default: "reports/jscpd/jscpd-report.md"
   fail-on-missing:
     description: "Fail when either the junit, coverage or the CPD files are missing"
     required: false
-    default: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -44,17 +41,17 @@ runs:
         files: "${{ inputs.cpdPath }}"
 
     - name: "Coverage file is missing"
-      if: steps.codecov_exists.outputs.files_exists != 'true'
+      if: (inputs.fail-on-missing == 'true') && (steps.codecov_exists.outputs.files_exists != 'true')
       run: exit 1
       shell: bash
       
     - name: "JUnit file is missing"
-      if: steps.junit_exists.outputs.files_exists != 'true'
+      if: (inputs.fail-on-missing == 'true') && (steps.junit_exists.outputs.files_exists != 'true')
       run: exit 1
       shell: bash
 
     - name: "CPD file is missing"
-      if: steps.cpd_exists.outputs.files_exists != 'true'
+      if: (inputs.fail-on-missing == 'true') && (steps.cpd_exists.outputs.files_exists != 'true')
       run: exit 1
       shell: bash
   
