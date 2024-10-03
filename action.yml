@@ -1,24 +1,97 @@
-name: "A very cool action"
-description: "Does the very cool thing in a cool way"
+name: "Collect and publish test results"
+description: "Test results, coverage results and CPD"
 
 inputs:
-  node-version:
-    description: "What version to install?"
-    type: string
+  junit-report-path:
+    description: "The path to the JUnit report"
     required: false
-    default: latest
-
-outputs:
-  npm-version:
-    description: "The version of NPM installed"
-    value: ${{ steps.something.outputs.npm-version }}
+    default: "**/junit.xml"
+  cobertura-report-path:
+    description: "The path to the Cobertura report"
+    required: false
+    default: "**/cobertura-coverage.xml"
+  cpdPath:
+    description: "Where is your markdown cpd report generated to?"
+    required: false
+    default: "reports/jscpd/jscpd-report.md"
+  fail-on-missing:
+    description: "Fail when either the junit, coverage or the CPD files are missing"
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
   steps:
-    - name: Use Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v4.0.4
-      id: something
+    - name: "Check coverage existence"
+      id: junit_exists
+      uses: andstor/file-existence-action@v3
       with:
-        node-version: ${{ inputs.node-version }}
-        cache: 'pnpm'
+        files: "${{ inputs.junit-report-path }}"
+        
+    - name: "Check coverage existence"
+      id: codecov_exists
+      uses: andstor/file-existence-action@v3
+      with:
+        files: "${{ inputs.cobertura-report-path }}"
+
+    - name: "Check cpd existence"
+      id: cpd_exists
+      uses: andstor/file-existence-action@v3
+      with:
+        files: "${{ inputs.cpdPath }}"
+
+    - name: "Coverage file is missing"
+      if: (inputs.fail-on-missing == 'true') && (steps.codecov_exists.outputs.files_exists != 'true')
+      run: exit 1
+      shell: bash
+      
+    - name: "JUnit file is missing"
+      if: (inputs.fail-on-missing == 'true') && (steps.junit_exists.outputs.files_exists != 'true')
+      run: exit 1
+      shell: bash
+
+    - name: "CPD file is missing"
+      if: (inputs.fail-on-missing == 'true') && (steps.cpd_exists.outputs.files_exists != 'true')
+      run: exit 1
+      shell: bash
+  
+    - name: Publish Test Results
+      if: steps.junit_exists.outputs.files_exists == 'true'
+      uses: EnricoMi/publish-unit-test-result-action/composite@v2
+      with:
+        junit_files: ${{ inputs.junit-report-path }}
+        
+    - name: Code Coverage Summary Report
+      if: steps.codecov_exists.outputs.files_exists == 'true'
+      uses: irongut/CodeCoverageSummary@v1.3.0
+      with:
+        format: markdown
+        output: file
+        hide_complexity: false
+        badge: true
+        filename: ${{ inputs.cobertura-report-path }}
+    
+    - name: Publish code coverage report
+      if: steps.codecov_exists.outputs.files_exists == 'true'
+      run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+      shell: bash
+      
+    - name: Add Coverage PR Comment
+      if: steps.codecov_exists.outputs.files_exists == 'true'
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        recreate: true
+        path: code-coverage-results.md
+        
+    - name: Publish jscpd report
+      if: steps.cpd_exists.outputs.files_exists == 'true'
+      run: cat ${{ inputs.cpdPath }} >> $GITHUB_STEP_SUMMARY
+      shell: bash
+    
+    - name: Add CPD Report PR Comment
+      uses: marocchino/sticky-pull-request-comment@v2
+      if: steps.cpd_exists.outputs.files_exists == 'true'
+      with:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        recreate: true
+        path: ${{ inputs.cpdPath }}
