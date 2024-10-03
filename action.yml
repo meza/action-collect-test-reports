@@ -9,6 +9,7 @@ inputs:
   cobertura-report-path:
     description: "The path to the Cobertura report"
     required: false
+    type: string
     default: "**/cobertura-coverage.xml"
   cpd-report-path:
     description: "Where is your markdown cpd report generated to?"
