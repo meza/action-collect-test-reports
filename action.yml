@@ -64,7 +64,7 @@ runs:
 
     - name: Publish Test Results
       if: steps.junit_exists.outputs.files_exists == 'true'
-      uses: EnricoMi/publish-unit-test-result-action/composite@v2
+      uses: EnricoMi/publish-unit-test-result-action/linux@v2
       with:
         junit_files: ${{ inputs.junit-report-path }}
 
