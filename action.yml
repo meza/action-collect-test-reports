@@ -18,6 +18,13 @@ inputs:
     description: "Fail when either the junit, coverage or the CPD files are missing"
     required: false
     default: "false"
+  gh-token:
+    description: "GitHub token"
+    required: true
+
+branding:
+    icon: "paperclip"
+    color: "blue"
 
 runs:
   using: "composite"
@@ -92,6 +99,6 @@ runs:
       uses: marocchino/sticky-pull-request-comment@v2
       if: steps.cpd_exists.outputs.files_exists == 'true'
       with:
-        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        GITHUB_TOKEN: ${{ inputs.gh-token }}
         recreate: true
         path: ${{ inputs.cpd-report-path }}
